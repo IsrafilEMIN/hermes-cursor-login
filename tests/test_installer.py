@@ -118,7 +118,9 @@ def test_install_selects_cursor_in_hermes_config(tmp_path: Path) -> None:
     assert "base_url: http://127.0.0.1:8765/v1" in text
 
 
-def test_install_preserves_user_default_when_provider_already_cursor(tmp_path: Path) -> None:
+def test_install_preserves_user_default_when_provider_already_cursor(
+    tmp_path: Path,
+) -> None:
     home = tmp_path / "hermes"
     home.mkdir()
     (home / "config.yaml").write_text(
@@ -135,4 +137,3 @@ def test_install_preserves_user_default_when_provider_already_cursor(tmp_path: P
 def test_upsert_inserts_default_when_missing() -> None:
     updated = upsert_model_config("model:\n  provider: cursor\n")
     assert "  default: default" in updated.splitlines()
-

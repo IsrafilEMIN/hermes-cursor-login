@@ -56,11 +56,11 @@ def test_stop_without_pid_file(tmp_path: Path, capsys) -> None:
 
 
 def test_program_parsers_extract_interpreter(tmp_path: Path) -> None:
-    assert _program_from_plist(
-        launchd_plist(tmp_path, 8765).encode()
-    ) == sys.executable
+    assert _program_from_plist(launchd_plist(tmp_path, 8765).encode()) == sys.executable
     assert _program_from_unit(systemd_unit(tmp_path, 8765)) == sys.executable
-    assert _program_from_cmd('@echo off\r\n"C:\\py\\python.exe" "-m" "x"\r\n') == "C:\\py\\python.exe"
+    assert (
+        _program_from_cmd('@echo off\r\n"C:\\py\\python.exe" "-m" "x"\r\n')
+        == "C:\\py\\python.exe"
+    )
     assert _program_from_plist(b"not a plist") is None
     assert _program_from_unit("[Service]\n") is None
-
