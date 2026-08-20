@@ -264,7 +264,9 @@ class BridgeHandler(BaseHTTPRequestHandler):
             return
         self._send(self.app.handle(self.command, self.path, headers, b""))
 
-    def _fail(self, message: str, status: int, error_type: str = "invalid_request_error") -> None:
+    def _fail(
+        self, message: str, status: int, error_type: str = "invalid_request_error"
+    ) -> None:
         self._send(_error(message, status, error_type))
 
     def _completion(self, headers: dict[str, str]) -> None:

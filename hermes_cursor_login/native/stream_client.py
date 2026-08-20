@@ -161,7 +161,9 @@ def _exec_response(
             "Native Cursor screen tools are disabled"
         )
     elif case == "computer_use_args":
-        _error(response.computer_use_result, "Native Cursor computer tools are disabled")
+        _error(
+            response.computer_use_result, "Native Cursor computer tools are disabled"
+        )
     return response
 
 

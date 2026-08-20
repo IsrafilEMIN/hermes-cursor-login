@@ -339,7 +339,16 @@ def _doctor(args: argparse.Namespace) -> int:
         print("fix: hermes-cursor-login install   # writes model.provider=cursor")
     if not service_ok:
         print("fix: reinstall, then hermes-cursor-login login   # re-pins the service")
-    return 0 if plugin_ok and bridge_ok and auth_ok and listener_ok and config_ok and service_ok else 1
+    return (
+        0
+        if plugin_ok
+        and bridge_ok
+        and auth_ok
+        and listener_ok
+        and config_ok
+        and service_ok
+        else 1
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:

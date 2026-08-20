@@ -213,7 +213,7 @@ def _program_from_unit(text: str) -> str | None:
     for line in text.splitlines():
         if line.startswith("ExecStart="):
             try:
-                return shlex.split(line[len("ExecStart="):])[0]
+                return shlex.split(line[len("ExecStart=") :])[0]
             except (ValueError, IndexError):
                 return None
     return None
