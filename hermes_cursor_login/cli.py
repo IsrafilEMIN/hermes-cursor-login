@@ -16,6 +16,7 @@ from .installer import (
     ENV_KEY,
     install_plugin,
     model_config_is_current,
+    related_hermes_homes,
     sync_hermes_model_config,
     uninstall_plugin,
 )
@@ -114,11 +115,17 @@ def _install(args: argparse.Namespace) -> int:
     except (FileExistsError, OSError, ValueError) as exc:
         return _fail(exc)
     print(f"Installed Cursor provider: {result.plugin_dir}")
+    for extra in result.extra_plugin_dirs:
+        print(f"Installed Cursor provider for profile: {extra}")
     if result.backup_dir is not None:
         print(f"Previous provider backup: {result.backup_dir}")
     print(f"Bridge credential stored in: {result.env_path}")
     print(f"Hermes model config updated: {config_path}")
     print("Run `hermes-cursor-login login` once; the bridge survives reboot.")
+    print(
+        "After `hermes profile create`, re-run install so the new profile "
+        "gets plugins/model-providers/cursor."
+    )
     return 0
 
 
@@ -335,6 +342,25 @@ def _doctor(args: argparse.Namespace) -> int:
         )
     if not listener_ok:
         print("fix: hermes-cursor-login login   # starts the background bridge")
+    missing_profiles = [
+        related
+        for related in related_hermes_homes(home)
+        if related != home
+        and not (
+            (related / "plugins" / "model-providers" / "cursor" / "__init__.py").is_file()
+            and (
+                related / "plugins" / "model-providers" / "cursor" / "plugin.yaml"
+            ).is_file()
+        )
+    ]
+    extra_homes = [related for related in related_hermes_homes(home) if related != home]
+    if missing_profiles:
+        print("profile plugins: missing")
+        for related in missing_profiles:
+            print(f"  {related}")
+        print("fix: hermes-cursor-login install")
+    elif extra_homes:
+        print(f"profile plugins: ok ({len(extra_homes)})")
     if not config_ok:
         print("fix: hermes-cursor-login install   # writes model.provider=cursor")
     if not service_ok:
@@ -347,6 +373,7 @@ def _doctor(args: argparse.Namespace) -> int:
         and listener_ok
         and config_ok
         and service_ok
+        and not missing_profiles
         else 1
     )
 

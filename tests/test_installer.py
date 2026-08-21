@@ -137,3 +137,19 @@ def test_install_preserves_user_default_when_provider_already_cursor(
 def test_upsert_inserts_default_when_missing() -> None:
     updated = upsert_model_config("model:\n  provider: cursor\n")
     assert "  default: default" in updated.splitlines()
+
+
+def test_install_copies_plugin_into_named_profiles(tmp_path: Path) -> None:
+    home = tmp_path / "hermes"
+    profile = home / "profiles" / "x-growth"
+    profile.mkdir(parents=True)
+    (profile / "config.yaml").write_text(
+        "model:\n  provider: cursor\n  default: cursor-grok-4.6-high\n"
+        "  base_url: http://127.0.0.1:8765/v1\n"
+    )
+    result = install_plugin(home)
+    plugin = profile / "plugins" / "model-providers" / "cursor" / "__init__.py"
+    assert plugin.read_text() == PLUGIN_INIT
+    assert result.extra_plugin_dirs == (plugin.parent,)
+    assert "default: cursor-grok-4.6-high" in (profile / "config.yaml").read_text()
+    assert "provider: cursor" in (home / "config.yaml").read_text()
