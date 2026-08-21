@@ -47,6 +47,7 @@ class InstallResult:
     plugin_dir: Path
     env_path: Path
     backup_dir: Path | None
+    extra_plugin_dirs: tuple[Path, ...] = ()
 
 
 def validate_bridge_token(value: str) -> str:
@@ -60,6 +61,37 @@ def validate_bridge_token(value: str) -> str:
     ):
         raise ValueError("Bridge token must be a printable single-line value")
     return token
+
+
+def hermes_root_for(hermes_home: str | Path) -> Path:
+    home = Path(hermes_home).expanduser()
+    if home.parent.name == "profiles":
+        return home.parent.parent
+    return home
+
+
+def related_hermes_homes(hermes_home: str | Path) -> list[Path]:
+    requested = Path(hermes_home).expanduser()
+    root = hermes_root_for(requested)
+    homes: list[Path] = [root]
+    profiles = root / "profiles"
+    if profiles.is_dir() and not profiles.is_symlink():
+        homes.extend(
+            sorted(
+                path
+                for path in profiles.iterdir()
+                if path.is_dir()
+                and not path.is_symlink()
+                and not path.name.startswith(".")
+            )
+        )
+    if requested not in homes:
+        homes.append(requested)
+    return homes
+
+
+def _plugin_dir(hermes_home: str | Path) -> Path:
+    return Path(hermes_home).expanduser() / "plugins" / "model-providers" / "cursor"
 
 
 def _plugin_conflicts(plugin_dir: Path) -> bool:
@@ -79,13 +111,13 @@ def _plugin_conflicts(plugin_dir: Path) -> bool:
     )
 
 
-def install_plugin(hermes_home: str | Path, *, force: bool = False) -> InstallResult:
+def _install_plugin_files(
+    hermes_home: str | Path, *, force: bool = False
+) -> tuple[Path, Path | None]:
     home = Path(hermes_home).expanduser()
-    plugin_dir = home / "plugins" / "model-providers" / "cursor"
-    env_path = home / ".env"
+    plugin_dir = _plugin_dir(home)
     reject_symlink_chain(home)
     reject_symlink_chain(plugin_dir, home)
-    reject_symlink_chain(env_path, home)
     backup_dir: Path | None = None
     if _plugin_conflicts(plugin_dir):
         if not force:
@@ -99,6 +131,20 @@ def install_plugin(hermes_home: str | Path, *, force: bool = False) -> InstallRe
     plugin_dir.mkdir(parents=True, exist_ok=True)
     for name, content in PLUGIN_FILES.items():
         atomic_write(plugin_dir / name, content, 0o644)
+    return plugin_dir, backup_dir
+
+
+def install_plugin(hermes_home: str | Path, *, force: bool = False) -> InstallResult:
+    home = Path(hermes_home).expanduser()
+    env_path = home / ".env"
+    reject_symlink_chain(env_path, home)
+    plugin_dir, backup_dir = _install_plugin_files(home, force=force)
+    extra: list[Path] = []
+    for related in related_hermes_homes(home):
+        if related == home:
+            continue
+        extra_dir, _ = _install_plugin_files(related, force=force)
+        extra.append(extra_dir)
     try:
         env_text = env_path.read_text(encoding="utf-8")
     except FileNotFoundError:
@@ -108,7 +154,10 @@ def install_plugin(hermes_home: str | Path, *, force: bool = False) -> InstallRe
     atomic_write(env_path, dotenv_set(env_text, ENV_KEY, token), 0o600)
     sync_hermes_model_config(home)
     return InstallResult(
-        plugin_dir=plugin_dir, env_path=env_path, backup_dir=backup_dir
+        plugin_dir=plugin_dir,
+        env_path=env_path,
+        backup_dir=backup_dir,
+        extra_plugin_dirs=tuple(extra),
     )
 
 

@@ -39,17 +39,28 @@ uv tool install .                     # from a checkout
 # or: pipx install .
 ```
 
-Development checkout — editable venv. The command lives in `.venv/bin`; the service will also pin that Python. If you delete or move the checkout, the bridge stops until you reinstall and re-run `login`:
+Development checkout — editable venv. The command lives in `.venv/bin`; the service will also pin that Python. If you delete or move the checkout, the bridge stops until you reinstall and re-run `login`. Put that `bin` directory on your PATH so you can run `hermes-cursor-login` without the prefix:
 
 ```bash
 python3.11 -m venv .venv
 .venv/bin/python -m pip install -e .
-.venv/bin/hermes-cursor-login install
-.venv/bin/hermes-cursor-login login
-.venv/bin/hermes-cursor-login doctor
+
+# zsh (default on macOS)
+echo 'export PATH="'"$PWD"'/.venv/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+
+# bash
+# echo 'export PATH="'"$PWD"'/.venv/bin:$PATH"' >> ~/.bashrc
+# source ~/.bashrc
+
+hermes-cursor-login install
+hermes-cursor-login login
+hermes-cursor-login doctor
 ```
 
-After a tool install (`uv` / `pipx`):
+`$PWD` must be the checkout root when you append that line. After that, `install` / `login` / `doctor` work from any directory.
+
+After a tool install (`uv` / `pipx`), the command is already on PATH:
 
 ```bash
 hermes-cursor-login install
@@ -89,6 +100,13 @@ hermes-cursor-login login --hermes-home /path/to/hermes-home
 ## Configure Hermes
 
 `install` already sets `model.provider`, `model.default`, and `model.base_url` in `$HERMES_HOME/config.yaml`. Restart Hermes Desktop or the CLI so it reloads that home. Cursor shows in the **model selector**, not Plugins.
+
+Hermes named profiles (`~/.hermes/profiles/<name>/`) are separate `HERMES_HOME` trees. Creating a profile clones `config.yaml` (`model.provider: cursor`) but not `plugins/`, so the new profile fails with `Unknown provider 'cursor'`. `install` copies the Cursor provider into every existing profile under that home. After `hermes profile create`, run `install` again, or:
+
+```bash
+hermes-cursor-login install --hermes-home ~/.hermes/profiles/<name>
+```
+
 
 If models disappear after a restart or reboot, run `hermes-cursor-login doctor`. Persistence should be `launchd` (macOS), `systemd-user` (Linux), or `logon-task` (Windows). `none` means run `login` again. `doctor` also reports `service interpreter: missing (...)` when the service points at a Python installation that no longer exists (typical after deleting a checkout venv); the fix is to reinstall and re-run `login`.
 
